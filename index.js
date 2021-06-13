@@ -5,7 +5,7 @@ const fs   = require('fs');
 const url  = require('url');
 const nmap = require('node-nmap');
 const request = require('request');
-const dns = require('dns');
+const dns = require('dns'); 
 
 
 const IPAddress = {

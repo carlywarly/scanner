@@ -97,24 +97,28 @@ setInterval(function() {
     var xqsystem_device_list;  
     request(`http://192.168.0.1/cgi-bin/luci/;stok=${token}/api/xqsystem/device_list`, { json: true }, (err, res, body) => {
     if (err) { return console.log(err); }
-        xqsystem_device_list = body.list;
-        //console.log(xqsystem_device_list);        
-        let currentDate = new Date().toLocaleString()
-        xqsystem_device_list.forEach(device => {            
-          subnet.forEach(IPAddress => {
-              if(device.ip == IPAddress.ip) {
-                  if (IPAddress.hostname == "" && device.origin_name != "") { IPAddress.hostname = device.origin_name}
-                  if (IPAddress.MacAddress == "" && device.mac != "") { IPAddress.MacAddress =  device.mac };
-                  if (IPAddress.Vendor == "Unknown" && device.company.name != "")  { IPAddress.Vendor = device.company.name };
-                  IPAddress.Online = true;
-                  if (IPAddress.firstSeen == "") { IPAddress.firstSeen = currentDate};
-                  IPAddress.lastSeen = currentDate;            
-                  //console.log(IPAddress);
-              }                  
-          })  
-          //console.log([device.mac,device.ip,device.hostname,device.origin_name,device.company.name]);                           
-        })
-        console.log("Complete - openwrt scan")
+        if (body.list) {
+            xqsystem_device_list = body.list;
+            console.log(xqsystem_device_list);        
+            let currentDate = new Date().toLocaleString()
+            xqsystem_device_list.forEach(device => {            
+            subnet.forEach(IPAddress => {
+                if(device.ip == IPAddress.ip) {
+                    if (IPAddress.hostname == "" && device.origin_name != "") { IPAddress.hostname = device.origin_name}
+                    if (IPAddress.MacAddress == "" && device.mac != "") { IPAddress.MacAddress =  device.mac };
+                    if (IPAddress.Vendor == "Unknown" && device.company.name != "")  { IPAddress.Vendor = device.company.name };
+                    IPAddress.Online = true;
+                    if (IPAddress.firstSeen == "") { IPAddress.firstSeen = currentDate};
+                    IPAddress.lastSeen = currentDate;            
+                    //console.log(IPAddress);
+                }                  
+            })  
+            //console.log([device.mac,device.ip,device.hostname,device.origin_name,device.company.name]);                           
+            })
+            console.log("Complete - openwrt scan")
+        } else {
+            console.log("xqsystem_device_list is null")
+        }
     });
   };
 }, (30 * 1000));

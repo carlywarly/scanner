@@ -99,7 +99,7 @@ setInterval(function() {
     if (err) { return console.log(err); }
         if (body.list) {
             xqsystem_device_list = body.list;
-            //console.log(xqsystem_device_list);        
+            console.log(xqsystem_device_list);        
             let currentDate = new Date().toLocaleString()
             xqsystem_device_list.forEach(device => {            
             subnet.forEach(IPAddress => {

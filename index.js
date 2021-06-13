@@ -92,7 +92,8 @@ setInterval(function() {
 
 setInterval(function() {
   if(token == "") {
-    request(('http://192.168.0.1/cgi-bin/luci/api/xqsystem/login?username=admin&password=' + myArgs[0]), { json: true }, (err, res, body) => {
+    var restURL = 'http://192.168.0.1/cgi-bin/luci/api/xqsystem/login?username=admin&password=' + myArgs[0];
+    request(restURL, { json: true }, (err, res, body) => {
       if (err) { return console.log(err); }
       token = body.token
     });

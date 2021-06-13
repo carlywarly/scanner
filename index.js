@@ -244,7 +244,8 @@ const server = http.createServer((req,res) => {
         htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
             
         OutputData.forEach(IP => {           
-            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${IP.firstSeen.format("%d-%m-%Y %H:%M:%S")}</td><td>${IP.lastSeen}</td></tr>\n`;                  
+            var firstSeen = new Date(IP.firstSeen);
+            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen.format("%d-%m-%Y %H:%M:%S")}</td><td>${IP.lastSeen}</td></tr>\n`;                  
         });
         htmlpage += "</table>"      
       } else {

@@ -236,16 +236,20 @@ const server = http.createServer((req,res) => {
       htmlpage += "</head>"
       htmlpage += "<body>"
     
-      htmlpage += '<table id="ArmstrongAX">\n'
-      htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
-          
-      OutputData.forEach(IP => {           
-          htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${IP.firstSeen}</td><td>${IP.lastSeen}</td></tr>\n`;                  
-      });
-      htmlpage += "</table>"      
+      if(OutputData) {
+        htmlpage += '<table id="ArmstrongAX">\n'
+        htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
+            
+        OutputData.forEach(IP => {           
+            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${IP.firstSeen}</td><td>${IP.lastSeen}</td></tr>\n`;                  
+        });
+        htmlpage += "</table>"      
+      } else {
+        htmlpage += "<H1>Initialising...</H1>"  
+      }
       htmlpage += "</body>"
       htmlpage += "</html>"
-      //console.log(htmlpage)
+    //console.log(htmlpage)
       res.writeHead(200, { 'Content-type': contentType});
       res.end(htmlpage, 'utf8')    
     } else {

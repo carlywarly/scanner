@@ -97,6 +97,7 @@ setInterval(function() {
     var xqsystem_device_list;  
     request(`http://192.168.0.1/cgi-bin/luci/;stok=${token}/api/xqsystem/device_list`, { json: true }, (err, res, body) => {
     if (err) { return console.log(err); }
+        console.log(body);
         if (body.list) {
             xqsystem_device_list = body.list;
             console.log(xqsystem_device_list);        

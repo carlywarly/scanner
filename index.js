@@ -101,7 +101,7 @@ setInterval(function() {
     var xqsystem_device_list;      
     request(`http://192.168.0.1/cgi-bin/luci/;stok=${token}/api/xqsystem/device_list`, { json: true }, (err, res, body) => {
     if (err) { return console.log(err); }
-        console.log(body);
+        //console.log(body);
         if (body.list) {
             xqsystem_device_list = body.list;
             //console.log(xqsystem_device_list);        
@@ -236,7 +236,7 @@ const server = http.createServer((req,res) => {
       htmlpage += "</head>"
       htmlpage += "<body>"
     
-      if(OutputData) {
+      if(OutputData.length > 0) {
         htmlpage += '<table id="ArmstrongAX">\n'
         htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
             
@@ -282,15 +282,12 @@ const server = http.createServer((req,res) => {
   const PORT = process.env.port || 8083;
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   
-
-
   var sortIP_Asc = true;
   var sortType_Asc = true;
   var sortname_Asc = true;
   var sortVendor_Asc = true;
   var sortfirstSeen_Asc = true;
-  var sortlastSeen_Asc = true;
-  
+  var sortlastSeen_Asc = true; 
   
   function sortfirstSeen(a,b) {
       if(a.firstSeen == null) {

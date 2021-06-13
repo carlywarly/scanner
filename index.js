@@ -33,6 +33,9 @@ for (let i = 1; i < 255; i++) {
     subnet.push(ip);
 }
 
+var myArgs = process.argv.slice(2);
+console.log('myArgs: ', myArgs);
+
 nmap.nmapLocation = "nmap";
 var quickscan = new nmap.QuickScan("192.168.0.1/24","-sL");
 
@@ -89,12 +92,13 @@ setInterval(function() {
 
 setInterval(function() {
   if(token == "") {
-    request('http://192.168.0.1/cgi-bin/luci/api/xqsystem/login?username=admin&password=5tre55ED', { json: true }, (err, res, body) => {
+    request(('http://192.168.0.1/cgi-bin/luci/api/xqsystem/login?username=admin&password=' + myArgs[0]), { json: true }, (err, res, body) => {
       if (err) { return console.log(err); }
       token = body.token
     });
   } else {  
     var xqsystem_device_list;  
+    console.log("token: " + token);
     request(`http://192.168.0.1/cgi-bin/luci/;stok=${token}/api/xqsystem/device_list`, { json: true }, (err, res, body) => {
     if (err) { return console.log(err); }
         console.log(body);

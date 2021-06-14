@@ -303,12 +303,14 @@ const server = http.createServer((req,res) => {
           return 1
       } 
       if (a.firstSeen.indexOf("/") > -1) {
-          var IPa = new Date(a.firstSeen.split('/')[1] + '-' + a.firstSeen.split('/')[0] + '-' + a.firstSeen.split('/')[2]);
+          //var IPa = new Date(a.firstSeen.split('/')[1] + '-' + a.firstSeen.split('/')[0] + '-' + a.firstSeen.split('/')[2]);
+          var IPa = new Date(a.firstSeen);
       } else {
           var IPa = a.firstSeen
       }
       if (b.firstSeen.indexOf("/") > -1) {
-          var IPb = new Date(b.firstSeen.split('/')[1] + '-' + b.firstSeen.split('/')[0] + '-' + b.firstSeen.split('/')[2]);
+          //var IPb = new Date(b.firstSeen.split('/')[1] + '-' + b.firstSeen.split('/')[0] + '-' + b.firstSeen.split('/')[2]);
+          var IPb = new Date(b.firstSeen);
       } else {
           var IPb = a.firstSeen
       }        

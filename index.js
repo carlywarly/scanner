@@ -245,9 +245,9 @@ const server = http.createServer((req,res) => {
             
         OutputData.forEach(IP => {           
             var firstSeen = (new Date(IP.firstSeen).toLocaleString('en-GB')).replace(",","")
-            var lastSeen = new Date(IP.lastSeen);
+            var lastSeen = (new Date(IP.lastSeen).toLocaleString('en-GB')).replace(",","")
             
-            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen}</td><td>${lastSeen.toLocaleString('en-GB')}</td></tr>\n`; 
+            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen}</td><td>${lastSeen}</td></tr>\n`; 
         });
         htmlpage += "</table>"      
       } else {
@@ -338,12 +338,14 @@ const server = http.createServer((req,res) => {
           return 1
       }    
       if (a.lastSeen.indexOf("/") > -1) {
-          var IPa = new Date(a.lastSeen.split('/')[1] + '-' + a.lastSeen.split('/')[0] + '-' + a.lastSeen.split('/')[2]);
+          //var IPa = new Date(a.lastSeen.split('/')[1] + '-' + a.lastSeen.split('/')[0] + '-' + a.lastSeen.split('/')[2]);
+          var IPa = new Date(a.lastSeen);
       } else {
           var IPa = a.lastSeen
       }
       if (b.lastSeen.indexOf("/") > -1) {
-          var IPb = new Date(b.lastSeen.split('/')[1] + '-' + b.lastSeen.split('/')[0] + '-' + b.lastSeen.split('/')[2]);
+          //var IPb = new Date(b.lastSeen.split('/')[1] + '-' + b.lastSeen.split('/')[0] + '-' + b.lastSeen.split('/')[2]);
+          var IPb = new Date(b.lastSeen);
       } else {
           var IPb = a.lastSeen
       }    

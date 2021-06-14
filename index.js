@@ -245,8 +245,9 @@ const server = http.createServer((req,res) => {
             
         OutputData.forEach(IP => {           
             var firstSeen = new Date(IP.firstSeen);
+            var lastSeen = new Date(IP.lastSeen);
             
-            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen.toLocaleString('en-GB')}</td><td>${IP.lastSeen}</td></tr>\n`;                  
+            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen.toLocaleString('en-GB')}</td><td>${lastSeen.toLocaleString('en-GB')}</td></tr>\n`; 
         });
         htmlpage += "</table>"      
       } else {

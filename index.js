@@ -5,131 +5,210 @@ const fs   = require('fs');
 const url  = require('url');
 const nmap = require('node-nmap');
 const request = require('request');
-const dns = require('dns'); 
+const dns = require('dns');
+const loki = require('lokijs')
+
+var db = new loki('.NetScan.json');
+
+var ipAddresses
+var macAddresses
+
+var omadaUser = process.env.omadaUser || "admin";
+var omadaPass = process.env.omadaPass;
 
 
-const IPAddress = {
-    IP: "",
-    MacAddress: "",
-    hostname: "",
-    Online: false,
-    firstSeen: "",
-    lastSeen: "",    
-    Vendor: ""
-  };
+db.loadDatabase({}, function(err) {
+    if (err) {
+      console.log("error : " + err);
+    }
+    else {
+      //console.log(db.listCollections())
+      macAddresses = db.getCollection("mac");
+      if (macAddresses === null) {
+        macAddresses = db.addCollection('mac', { indices: ['mac'] });
+      }
+      ipAddresses = db.getCollection("ip");
+      if (ipAddresses === null) {
+        ipAddresses  = db.addCollection('ip', { indices: ['ip','mac'] });
+      }
+      console.log("database loaded.");
+    }
+});
 
+// IP - ip,mac,hostname
+// MAC - mac,vendor,firstseen,lastseen,hostname
 
 var token = "";
 var subnet = [];
-for (let i = 1; i < 255; i++) {
-    var ip = Object.create(IPAddress);    
-    ip.ip = "192.168.0." + i;   
-    ip.MacAddress = "";
-    ip.hostname = "";
-    ip.Vendor = "Unknown";
-    ip.Online = false;
-    ip.firstSeen = "";
-    ip.lastSeen = "";
-    subnet.push(ip);
-}
 
+var cookieJar = request.jar();
 
-var sortTable = {sortIP: true, sortType_Asc: true, sortname_Asc: true ,sortVendor_Asc: true, sortfirstSeen_Asc: true,sortlastSeen_Asc: true };
-
-var myArgs = process.argv.slice(2);
-
-
-nmap.nmapLocation = "nmap";
-var quickscan = new nmap.QuickScan("192.168.0.1/24","-sL");
+var quickscan = new nmap.QuickScan("192.168.0.1/24","-sn");
 
 quickscan.on('complete',data => {
+    console.log("Quickscan data load");
+
     let currentDate = new Date().toLocaleString()
 
-    data = data.filter(device => device.mac != null)
-    //console.log(data);
-    data.forEach(device => {         
-        subnet.forEach(IPAddress => {
-            if(device.ip == IPAddress.ip) {
-                //console.log(device);
-                if (IPAddress.hostname == "" && device.hostname != null) { IPAddress.hostname = device.hostname.toLowerCase() };
-                if (IPAddress.MacAddress == "" && device.mac != null) { IPAddress.MacAddress =  device.mac};                
-                if (IPAddress.Vendor == "Unknown" && device.vendor != null) { IPAddress.Vendor = device.vendor };
-                IPAddress.Online = true;
-                if (IPAddress.firstSeen == "") { IPAddress.firstSeen = currentDate};
-                IPAddress.lastSeen = currentDate;           
-            } ;
-        });
-    }); 
-
+    if(typeof ipAddresses !== 'undefined') {
+        data = data.filter(device => device.mac != null)
+        //console.log(data);
+        data.forEach(device => {         
+            var entry = ipAddresses.findOne({ ip:device.ip });
+            if(entry == null ) {
+                //console.log("IP: " + device.ip);
+                ipAddresses.insert( { 
+                    ip : device.ip, 
+                    mac: device.mac, 
+                    hostname: (device.hostname == null ? "" : device.hostname.toLowerCase()), 
+                    vendor: device.vendor,
+                    firstSeen: currentDate,
+                    lastSeen: currentDate
+                    } );
+            } else {
+                //console.log("Found: " + device.ip);
+                entry.mac = device.mac;
+                entry.hostname = device.hostname;
+                entry.vendor = device.vendor;
+                entry.lastSeen = currentDate;
+                ipAddresses.update(entry);
+            };
+            var macEntry = macAddresses.findOne({ mac:device.mac });
+            if(macEntry == null ) {
+                //console.log("MAC: " + device.mac);
+                macAddresses.insert( { 
+                    mac: device.mac, 
+                    vendor: device.vendor,
+                    } );
+            };
+        }); 
+        db.saveDatabase();
+    };
 });
+
+
+if(omadaPass != "") {    
+    setInterval(function() {
+        if(token == "") {
+            var options = {
+                url: 'https://192.168.0.20:8043/api/v2/login',
+                json: true,
+                rejectUnauthorized: false,
+                requestCert: true,                
+                method: "POST",
+                jar: cookieJar,
+                body: {
+                    username: omadaUser,
+                    password: omadaPass
+                }
+            };
+            //console.log(options);
+            request(options, (err, res, response) => {
+                if (err) { return console.log(err); }
+                token = response.result.token
+                console.log(token);
+
+            });
+        } else {  
+            var options = {
+                url: 'https://192.168.0.20:8043/api/v2/sites/Default/clients?currentPage=1&currentPageSize=100&filters.active=true&token=' + token,
+                json: true,
+                rejectUnauthorized: false,
+                requestCert: true,                
+                jar: cookieJar,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                method: "GET"
+            };
+            //console.log(options);
+            request(options, (err, res, response) => {
+                if (err) { return console.log(err); }
+                console.log(`statusCode: ${res.statusCode}`)
+                
+                if (response) {
+                    client_list = response.result.data;
+                    //console.log(xqsystem_device_list);        
+                    let currentDate = new Date().toLocaleString()
+                    client_list.forEach(device => {            
+                        subnet.forEach(IPAddress => {
+                            if(device.ip == IPAddress.ip) {
+                                if (IPAddress.hostname == "" && device.hostname != "") { IPAddress.hostname = device.hostname}
+                                if (IPAddress.MacAddress == "" && device.mac != "") { IPAddress.MacAddress =  device.mac };
+                                IPAddress.Online = true;
+                                if (IPAddress.firstSeen == "") { IPAddress.firstSeen = currentDate};
+                                IPAddress.lastSeen = currentDate;            
+                                //console.log(IPAddress);
+                            }                  
+                        })  
+                        //console.log([device.mac,device.ip,device.hostname,device.origin_name,device.company.name]);                           
+                    })
+                    console.log("Complete - omada scan")
+                } else {
+                    console.log("omada is null")
+                }
+            });
+
+        };
+    }, (30 * 1000));
+};
+
 
 quickscan.on('error',error => {
     console.log(error);
 });
+function isEmpty(val){
+    return (val === undefined || val == null || val.length <= 0) ? true : false;
+}
 
-setInterval(function() {
-  quickscan.startScan();
-  console.log("Complete - quickscan")
-}, (30 * 1000));
-
-setInterval(function() {
-  //console.log(xqsystem_device_list);        
-  subnet.forEach(device => {
-    if(device.hostname == "") {
-        dns.reverse(device.ip, (err, hostnames) => {
-          if(hostnames) {
-            subnet.forEach(IPAddress => {
-              if(device.ip == IPAddress.ip) {
-                  //console.log(device);
-                  if (IPAddress.hostname == "" && device.hostname != null) { IPAddress.hostname = hostnames[0].toLowerCase() };
-              } ;
-            });
-          }            
-        });
-    }    
-  });
-  console.log("Complete - DNS Scan")
-}, (30 * 1000));
-
-
-
-setInterval(function() {
-  if(token == "") {
-    var restURL = 'http://192.168.0.1/cgi-bin/luci/api/xqsystem/login?username=admin&password=' + myArgs[0];    
-    request(restURL, { json: true }, (err, res, body) => {
-      if (err) { return console.log(err); }
-      token = body.token
-    });
-  } else {  
-    var xqsystem_device_list;      
-    request(`http://192.168.0.1/cgi-bin/luci/;stok=${token}/api/xqsystem/device_list`, { json: true }, (err, res, body) => {
-    if (err) { return console.log(err); }
-        //console.log(body);
-        if (body.list) {
-            xqsystem_device_list = body.list;
-            //console.log(xqsystem_device_list);        
-            let currentDate = new Date().toLocaleString()
-            xqsystem_device_list.forEach(device => {            
-            subnet.forEach(IPAddress => {
-                if(device.ip == IPAddress.ip) {
-                    if (IPAddress.hostname == "" && device.origin_name != "") { IPAddress.hostname = device.origin_name}
-                    if (IPAddress.MacAddress == "" && device.mac != "") { IPAddress.MacAddress =  device.mac };
-                    if (IPAddress.Vendor == "Unknown" && device.company.name != "")  { IPAddress.Vendor = device.company.name };
-                    IPAddress.Online = true;
-                    if (IPAddress.firstSeen == "") { IPAddress.firstSeen = currentDate};
-                    IPAddress.lastSeen = currentDate;            
-                    //console.log(IPAddress);
-                }                  
-            })  
-            //console.log([device.mac,device.ip,device.hostname,device.origin_name,device.company.name]);                           
-            })
-            console.log("Complete - openwrt scan")
-        } else {
-            console.log("xqsystem_device_list is null")
+setInterval(function() {    
+    db.saveDatabase(function(err) {
+        if (err) {
+            console.log("error : " + err);
+        }
+        else {
+            console.log("database saved.");
         }
     });
-  };
-}, (30 * 1000));
+}, (120 * 1000));
+  
+
+setInterval(function() {    
+    if(typeof macAddresses !== 'undefined') {
+        var results = macAddresses.where(function(obj) {
+            return (! obj.mac);
+        });
+        console.log(results);
+    }
+}, (90 * 1000));    
+
+
+setInterval(function() {
+  //quickscan = new nmap.QuickScan("192.168.0.1/24","-sL");
+  quickscan.startScan();
+  console.log("Complete - quickscan")
+}, (90 * 1000));
+
+setInterval(function() {  
+  var results = ipAddresses.where(obj => {
+    return obj.hostname == "";
+  });
+  
+  results.forEach(device => {    
+    dns.reverse(device.ip, (err, hostnames) => {
+        if(hostnames != null) {
+            var entry = ipAddresses.findOne({ ip:device.ip });
+            if(entry != null ) {
+                entry.hostname = hostnames.join("");
+                ipAddresses.update(entry);
+            };
+        }            
+    });
+  });
+  console.log("Complete - DNS Scan")
+}, (90 * 1000));
+
 
 const server = http.createServer((req,res) => {
     var link = url.parse(req.url, true);
@@ -157,10 +236,10 @@ const server = http.createServer((req,res) => {
         break;
     }
     
-    if(link.pathname === '/') {
-      var OutputData = [];
+    if(link.pathname === '/') {      
   
-      OutputData = subnet.filter(IP => IP.MacAddress != "");
+      var OutputData = ipAddresses.data;
+      
       //console.log(parameters.sort);
       switch (parameters.sort) {       
           case "name":
@@ -239,23 +318,16 @@ const server = http.createServer((req,res) => {
       htmlpage += "</head>"
       htmlpage += "<body>"
     
-      if(OutputData.length > 0) {
-        htmlpage += '<table id="ArmstrongAX">\n'
-        htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
-            
-        OutputData.forEach(IP => {           
-            var firstSeen = (new Date(IP.firstSeen).toLocaleString('en-GB')).replace(",","")
-            var lastSeen = (new Date(IP.lastSeen).toLocaleString('en-GB')).replace(",","")
-            
-            htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "null" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.MacAddress == null ? "null" : IP.MacAddress}</td><td>${IP.Vendor}</td><td>${firstSeen}</td><td>${lastSeen}</td></tr>\n`; 
-        });
-        htmlpage += "</table>"      
-      } else {
-        htmlpage += "<H1>Initialising...</H1>"  
-      }
+      htmlpage += '<table id="ArmstrongAX">\n'
+      htmlpage += "<tr><th><a href='/?sort=ip'>IP Address</a></th><th><a href='/?sort=name'>Name</a></th><th>MAC Address</th><th><a href='/?sort=Vendor'>Vendor</a></th><th><a href='/?sort=firstSeen'>First Seen</a></th><th><a href='/?sort=lastSeen'>Last Seen</a></th></tr>\n"
+          
+      OutputData.forEach(IP => {           
+          htmlpage += `<tr><td>${IP.ip}</td><td>${IP.hostname == null ? "" : IP.hostname.toLowerCase()}</td><td style="text-align:right">${IP.mac == null ? "null" : IP.mac}</td><td>${IP.vendor}</td><td>${IP.firstSeen}</td><td>${IP.lastSeen}</td></tr>\n`;                  
+      });
+      htmlpage += "</table>"      
       htmlpage += "</body>"
       htmlpage += "</html>"
-    //console.log(htmlpage)
+      //console.log(htmlpage)
       res.writeHead(200, { 'Content-type': contentType});
       res.end(htmlpage, 'utf8')    
     } else {
@@ -285,15 +357,18 @@ const server = http.createServer((req,res) => {
     }
   });
   
-  const PORT = process.env.port || 8083;
+  const PORT = process.env.port || 8081;
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   
+
+
   var sortIP_Asc = true;
   var sortType_Asc = true;
   var sortname_Asc = true;
   var sortVendor_Asc = true;
   var sortfirstSeen_Asc = true;
-  var sortlastSeen_Asc = true; 
+  var sortlastSeen_Asc = true;
+  
   
   function sortfirstSeen(a,b) {
       if(a.firstSeen == null) {
@@ -303,14 +378,12 @@ const server = http.createServer((req,res) => {
           return 1
       } 
       if (a.firstSeen.indexOf("/") > -1) {
-          //var IPa = new Date(a.firstSeen.split('/')[1] + '-' + a.firstSeen.split('/')[0] + '-' + a.firstSeen.split('/')[2]);
-          var IPa = new Date(a.firstSeen);
+          var IPa = new Date(a.firstSeen.split('/')[1] + '-' + a.firstSeen.split('/')[0] + '-' + a.firstSeen.split('/')[2]);
       } else {
           var IPa = a.firstSeen
       }
       if (b.firstSeen.indexOf("/") > -1) {
-          //var IPb = new Date(b.firstSeen.split('/')[1] + '-' + b.firstSeen.split('/')[0] + '-' + b.firstSeen.split('/')[2]);
-          var IPb = new Date(b.firstSeen);
+          var IPb = new Date(b.firstSeen.split('/')[1] + '-' + b.firstSeen.split('/')[0] + '-' + b.firstSeen.split('/')[2]);
       } else {
           var IPb = a.firstSeen
       }        
@@ -340,14 +413,12 @@ const server = http.createServer((req,res) => {
           return 1
       }    
       if (a.lastSeen.indexOf("/") > -1) {
-          //var IPa = new Date(a.lastSeen.split('/')[1] + '-' + a.lastSeen.split('/')[0] + '-' + a.lastSeen.split('/')[2]);
-          var IPa = new Date(a.lastSeen);
+          var IPa = new Date(a.lastSeen.split('/')[1] + '-' + a.lastSeen.split('/')[0] + '-' + a.lastSeen.split('/')[2]);
       } else {
           var IPa = a.lastSeen
       }
       if (b.lastSeen.indexOf("/") > -1) {
-          //var IPb = new Date(b.lastSeen.split('/')[1] + '-' + b.lastSeen.split('/')[0] + '-' + b.lastSeen.split('/')[2]);
-          var IPb = new Date(b.lastSeen);
+          var IPb = new Date(b.lastSeen.split('/')[1] + '-' + b.lastSeen.split('/')[0] + '-' + b.lastSeen.split('/')[2]);
       } else {
           var IPb = a.lastSeen
       }    
@@ -444,17 +515,17 @@ const server = http.createServer((req,res) => {
   };
   function SortVendor(a,b) {
       if (sortVendor_Asc) {
-          if (a.Vendor < b.Vendor) {
+          if (a.vendor < b.vendor) {
               return -1;
-          } else if (a.Vendor > b.Vendor) {
+          } else if (a.vendor > b.vendor) {
               return 1;
           } else {
               return 0;
           }
       } else {
-          if (a.Vendor > b.Vendor) {
+          if (a.vendor > b.vendor) {
               return -1;
-          } else if (a.Vendor < b.Vendor) {
+          } else if (a.vendor < b.vendor) {
               return 1;
           } else {
               return 0;

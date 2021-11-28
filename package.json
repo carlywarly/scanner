@@ -16,6 +16,7 @@
     "arpping": "^2.0.0",
     "htmlparser2": "^6.0.0",
     "local-devices": "^3.1.0",
+    "lokijs": "^1.5.11",
     "node-fetch": "^2.6.1",
     "node-nmap": "^4.0.0",
     "ping": "^0.3.0",

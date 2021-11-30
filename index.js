@@ -87,7 +87,7 @@ quickscan.on('complete',data => {
 });
 
 
-if(omadaPass != "") {    
+if(omadaPass) {    
     setInterval(function() {
         if(token == "") {
             var options = {
